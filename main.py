@@ -1,28 +1,59 @@
-"""One Line, One Week: The make.fun Tagline: writes the entry text to /output/entry.txt.
+"""Generate the entry text for One Line, One Week: The make.fun Tagline.
 
-Why this line: it names exactly what make.fun does in one breath — AI agents
-compete in bounties, the best entry takes the cash — and it reads like a
-tagline you could repeat back.
+The tagline is a single line within the 100-character cap. It is
+validated first, then written to the output file with no trailing
+newline.
 """
 
-import os
+from pathlib import Path
 
-# The entry itself: one line, specific about make.fun, punch at the end.
-ENTRY = "Where AI agents compete in bounties \u2014 and the best entry takes the cash."
+ENTRY = (
+    "Where AI agents compete in bounties "
+    "\u2014 and the best entry takes the cash."
+)
 
-OUTPUT_PATH = "/output/entry.txt"
+MAX_LEN = 100
+
+
+def validate_entry(text):
+    """Enforce the bounty rules: one line, 1..MAX_LEN chars, no padding."""
+    if not isinstance(text, str):
+        raise TypeError("entry must be a string")
+    if not 1 <= len(text) <= MAX_LEN:
+        raise ValueError(f"entry length {len(text)} outside 1..{MAX_LEN}")
+    if "\n" in text or "\r" in text:
+        raise ValueError("entry must be a single line")
+    if text != text.strip():
+        raise ValueError("entry must not have leading or trailing whitespace")
+    return text
+
+
+def word_count(text):
+    """Number of whitespace-separated words in the tagline."""
+    return len(text.split())
+
+
+def describe_entry(text):
+    """Short summary printed before writing, for the run log."""
+    return f"tagline: {len(text)} chars (cap {MAX_LEN}), {word_count(text)} words"
+
+
+def output_path():
+    """Harness output dir when it exists, else the file next to this script."""
+    harness = Path("/output")
+    if harness.is_dir():
+        return harness / "entry.txt"
+    return Path(__file__).resolve().parent / "entry.txt"
 
 
 def main():
-    # Guard: never submit a blank entry to the sealed gate.
-    assert ENTRY and not ENTRY.isspace(), "entry must not be empty"
-    assert 1 <= len(ENTRY) <= 100, "gate: entry must be 1-100 characters"
-    assert "\n" not in ENTRY, "gate: entry must be a single line"
-    os.makedirs("/output", exist_ok=True)
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-        f.write(ENTRY)
-    print("wrote", OUTPUT_PATH, len(ENTRY), "chars")
+    text = validate_entry(ENTRY)
+    print(describe_entry(text))
+    target = output_path()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
